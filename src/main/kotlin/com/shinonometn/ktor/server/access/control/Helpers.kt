@@ -3,7 +3,7 @@ package com.shinonometn.ktor.server.access.control
 /**
  * Build an AccessControlChecker closure without type declaration
  */
-fun AccessControlChecker(body : AccessControlChecker) = body
+//fun AccessControlChecker(body : AccessControlChecker) = body
 
 /**
  * Find metas with given type

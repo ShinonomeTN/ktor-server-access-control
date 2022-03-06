@@ -11,9 +11,15 @@ import org.junit.Test
 import org.slf4j.LoggerFactory
 
 fun Application.testInstallModule() {
+    class UserInfoBean(val username : String)
+
     install(AccessControl) {
         metaProvider { c ->
             call.request.header("Test-Tag")?.takeIf { it.isNotBlank() }?.let { c.put(it) }
+        }
+
+        provider("UserInfo") { c ->
+            call.request.cookies["user_info"]?.let { c.put(UserInfoBean(it)) }
         }
     }
 
@@ -28,9 +34,19 @@ fun Application.testInstallModule() {
             }
         }
 
-        accessControl({ if (true == meta<String>()?.isNotBlank()) accept() else reject("Message: ", "Need a Test-Tag Header.") }) {
+        val needTagChecker : AccessControlCheckerContext.() -> Unit = {
+            if (true == meta<String>()?.isNotBlank()) accept() else reject("Message: ", "Need a Test-Tag Header.")
+        }
+
+        accessControl(needTagChecker) {
             get("/reject_has_message") {
                 call.respondText { call.accessControl.meta<String>()!! }
+            }
+        }
+
+        accessControl("UserInfo", checker = { if(meta<UserInfoBean>()?.username == "shinonometn") accept() }) {
+            get("/has_user_info") {
+                call.respond(call.accessControl.meta<UserInfoBean>()!!.username)
             }
         }
     }
@@ -39,6 +55,19 @@ fun Application.testInstallModule() {
 class AccessControlFeatureKtTest {
 
     private val logger = LoggerFactory.getLogger("AccessControlFeatureKtTest")
+
+    @Test
+    fun `Test named access control`() {
+        withTestApplication(Application::testInstallModule) {
+            handleRequest(HttpMethod.Get, "/has_user_info") {
+                addHeader("Cookie", "user_info=shinonometn")
+            }.apply {
+                assertEquals(HttpStatusCode.OK, response.status())
+                assertEquals("shinonometn", response.content)
+                assertTrue(accessControl.meta.size == 1)
+            }
+        }
+    }
 
     @Test
     fun `Test plugin install`() {

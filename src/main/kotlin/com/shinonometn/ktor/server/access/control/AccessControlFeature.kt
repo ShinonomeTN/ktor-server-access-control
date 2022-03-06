@@ -7,19 +7,17 @@ import io.ktor.routing.*
 import io.ktor.util.*
 import io.ktor.util.pipeline.*
 import java.util.*
-import kotlin.collections.HashMap
 
-internal typealias CallContext = PipelineContext<*, ApplicationCall>
+internal typealias CallContext = PipelineContext<Unit, ApplicationCall>
 
-typealias AccessControlMetaExtractor = suspend CallContext.(AccessControlMetaProviderContext) -> Unit
+class AccessControlMetaExtractor(val name: String, val extractor: suspend CallContext.(AccessControlMetaProviderContext) -> Unit)
 
-typealias AccessControlChecker = AccessControlCheckerContext.() -> Unit
 
 private typealias OnUnAuthorizedHandler = suspend CallContext.(AccessControlContextSnapshot) -> Unit
 
 class AccessControl(configuration: Configuration) {
 
-    private val authorizationInfoProvider: List<AccessControlMetaExtractor> = configuration.authorizationInfoProviders
+    private val providers: List<AccessControlMetaExtractor> = configuration.authorizationInfoProviders
     private val onUnauthorized: OnUnAuthorizedHandler = configuration.onUnAuthorized
 
     class Configuration {
@@ -31,8 +29,16 @@ class AccessControl(configuration: Configuration) {
             else call.respond(HttpStatusCode.Forbidden)
         }
 
-        fun metaProvider(provider: AccessControlMetaExtractor) {
-            authorizationInfoProviders.add(provider)
+        @Deprecated("use provider(name, extractor) instead", ReplaceWith("provider(name, extractor)"))
+        fun metaProvider(provider: suspend CallContext.(AccessControlMetaProviderContext) -> Unit) {
+            provider("", provider)
+        }
+
+        fun provider(name: String, extractor: suspend CallContext.(AccessControlMetaProviderContext) -> Unit) {
+            if (authorizationInfoProviders.any { it.name == name }) {
+                throw IllegalArgumentException("Provider with name $name already registered.")
+            }
+            authorizationInfoProviders.add(AccessControlMetaExtractor(name, extractor))
         }
 
         fun onUnAuthorized(handler: OnUnAuthorizedHandler) {
@@ -54,14 +60,15 @@ class AccessControl(configuration: Configuration) {
         }
     }
 
-    fun interceptPipeline(pipeline: ApplicationCallPipeline, checker: AccessControlChecker) {
-        if (authorizationInfoProvider.isEmpty()) return
+    fun interceptPipeline(providerNames: Set<String>, pipeline: ApplicationCallPipeline, checker: AccessControlCheckerContext.() -> Unit) {
+        if (providers.isEmpty()) return
 
         pipeline.insertPhaseBefore(ApplicationCallPipeline.Call, AccessControlPhase)
 
         pipeline.intercept(AccessControlPhase) {
             val context = AccessControlContextImpl.from(call)
-            authorizationInfoProvider.forEach { it(context) }
+            (if (providerNames.isEmpty()) providers else providers.filter { providerNames.contains(it.name) })
+                .forEach { it.extractor(this, context) }
 
             checker(context)
 
@@ -104,7 +111,7 @@ interface AccessControlContext {
  */
 interface AccessControlMetaProviderContext : AccessControlContext {
     fun put(meta: Any) = this.meta.add(meta)
-    fun putAll(metas : Collection<Any>) = this.meta.addAll(metas)
+    fun putAll(metas: Collection<Any>) = this.meta.addAll(metas)
 }
 
 /**
@@ -173,13 +180,18 @@ class AccessControlContextImpl : AccessControlMetaProviderContext, AccessControl
 /**
  * Add access control route.
  * Use the given [checker] to decides what requests to child routes will be accepted.
- *
+ * If provider names are empty, all providers will be used.
  * Default behavior is rejecting all request. To allow a request, the `accept()` in checker context must be call.
  */
 @ContextDsl
-fun Route.accessControl(checker: AccessControlChecker, builder : Route.() -> Unit): Route {
+fun Route.accessControl(vararg providerNames: String, checker: AccessControlCheckerContext.() -> Unit, builder: Route.() -> Unit): Route {
     val authorizationRoute = createChild(AccessControlRouteSelector())
-    application.feature(AccessControl).interceptPipeline(authorizationRoute, checker)
+    application.feature(AccessControl).interceptPipeline(providerNames.toSet(), authorizationRoute, checker)
     authorizationRoute.builder()
     return authorizationRoute
+}
+
+@ContextDsl
+fun Route.accessControl(checker: AccessControlCheckerContext.() -> Unit, builder: Route.() -> Unit): Route {
+    return accessControl(builder = builder, checker = checker, providerNames = emptyArray())
 }
