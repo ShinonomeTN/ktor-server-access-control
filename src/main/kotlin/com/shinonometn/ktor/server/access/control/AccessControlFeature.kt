@@ -12,7 +12,6 @@ internal typealias CallContext = PipelineContext<Unit, ApplicationCall>
 
 class AccessControlMetaExtractor(val name: String, val extractor: suspend CallContext.(AccessControlMetaProviderContext) -> Unit)
 
-
 private typealias OnUnAuthorizedHandler = suspend CallContext.(AccessControlContextSnapshot) -> Unit
 
 class AccessControl(configuration: Configuration) {
@@ -60,7 +59,11 @@ class AccessControl(configuration: Configuration) {
         }
     }
 
-    fun interceptPipeline(providerNames: Set<String>, pipeline: ApplicationCallPipeline, checker: AccessControlCheckerContext.() -> Unit) {
+    fun interceptPipeline(
+        providerNames: Set<String>,
+        pipeline: ApplicationCallPipeline,
+        checker: suspend AccessControlCheckerContext.() -> Unit
+    ) {
         if (providers.isEmpty()) return
 
         pipeline.insertPhaseBefore(ApplicationCallPipeline.Call, AccessControlPhase)
@@ -184,7 +187,7 @@ class AccessControlContextImpl : AccessControlMetaProviderContext, AccessControl
  * Default behavior is rejecting all request. To allow a request, the `accept()` in checker context must be call.
  */
 @ContextDsl
-fun Route.accessControl(vararg providerNames: String, checker: AccessControlCheckerContext.() -> Unit, builder: Route.() -> Unit): Route {
+fun Route.accessControl(vararg providerNames: String, checker: suspend AccessControlCheckerContext.() -> Unit, builder: Route.() -> Unit): Route {
     val authorizationRoute = createChild(AccessControlRouteSelector())
     application.feature(AccessControl).interceptPipeline(providerNames.toSet(), authorizationRoute, checker)
     authorizationRoute.builder()
@@ -192,6 +195,6 @@ fun Route.accessControl(vararg providerNames: String, checker: AccessControlChec
 }
 
 @ContextDsl
-fun Route.accessControl(checker: AccessControlCheckerContext.() -> Unit, builder: Route.() -> Unit): Route {
+fun Route.accessControl(checker: suspend AccessControlCheckerContext.() -> Unit, builder: Route.() -> Unit): Route {
     return accessControl(builder = builder, checker = checker, providerNames = emptyArray())
 }

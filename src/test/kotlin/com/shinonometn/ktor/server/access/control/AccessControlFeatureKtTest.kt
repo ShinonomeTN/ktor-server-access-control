@@ -34,7 +34,7 @@ fun Application.testInstallModule() {
             }
         }
 
-        val needTagChecker : AccessControlCheckerContext.() -> Unit = {
+        val needTagChecker : suspend AccessControlCheckerContext.() -> Unit = {
             if (true == meta<String>()?.isNotBlank()) accept() else reject("Message: ", "Need a Test-Tag Header.")
         }
 
