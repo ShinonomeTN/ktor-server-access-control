@@ -6,9 +6,12 @@ import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.util.*
 import io.ktor.util.pipeline.*
+import org.slf4j.LoggerFactory
 import java.util.*
 
 internal typealias CallContext = PipelineContext<Unit, ApplicationCall>
+
+typealias AccessControlChecker = suspend AccessControlCheckerContext.() -> Unit
 
 class AccessControlMetaExtractor(val name: String, val extractor: suspend CallContext.(AccessControlMetaProviderContext) -> Unit)
 
@@ -47,6 +50,7 @@ class AccessControl(configuration: Configuration) {
 
     companion object Feature : ApplicationFeature<Application, Configuration, AccessControl> {
         override val key: AttributeKey<AccessControl> = AttributeKey("AccessControl")
+        internal val logger = LoggerFactory.getLogger("AccessControlFeature")
 
         // Don't need it now
         // val AuthorizationPhase = PipelinePhase("Authorization")
@@ -57,18 +61,19 @@ class AccessControl(configuration: Configuration) {
             val configuration = Configuration().apply(configure)
             return AccessControl(configuration)
         }
+
+        fun buildContext(provider : AccessControlMetaProviderContext.() -> Unit) : AccessControlCheckerContext =
+            AccessControlContextImpl().apply(provider)
     }
 
-    fun interceptPipeline(
-        providerNames: Set<String>,
-        pipeline: ApplicationCallPipeline,
-        checker: suspend AccessControlCheckerContext.() -> Unit
-    ) {
-        if (providers.isEmpty()) return
+    fun interceptPipeline(providerNames: Set<String>, routePipeline: Route, checker: AccessControlChecker) {
+        if (providers.isEmpty()) {
+            logger.warn("No provider configured. Access control for route '{}' will not be installed.", routePipeline.toString())
+            return
+        }
 
-        pipeline.insertPhaseBefore(ApplicationCallPipeline.Call, AccessControlPhase)
-
-        pipeline.intercept(AccessControlPhase) {
+        routePipeline.insertPhaseBefore(ApplicationCallPipeline.Call, AccessControlPhase)
+        routePipeline.intercept(AccessControlPhase) {
             val context = AccessControlContextImpl.from(call)
             (if (providerNames.isEmpty()) providers else providers.filter { providerNames.contains(it.name) })
                 .forEach { it.extractor(this, context) }
@@ -151,12 +156,13 @@ interface AccessControlCheckerContext : AccessControlMetaSnapshot {
  */
 interface AccessControlContextSnapshot : AccessControlMetaSnapshot {
     fun rejectReasons(): Map<String, String>
+    val isRejected : Boolean
 }
 
 class AccessControlContextImpl : AccessControlMetaProviderContext, AccessControlCheckerContext, AccessControlContextSnapshot {
     override val meta: MutableCollection<Any> by lazy { LinkedList() }
     private val rejectReasons: MutableMap<String, String> by lazy { HashMap() }
-    var isRejected: Boolean = true
+    override var isRejected: Boolean = true
         private set
 
     override fun rejectReasons(): Map<String, String> {
@@ -180,21 +186,3 @@ class AccessControlContextImpl : AccessControlMetaProviderContext, AccessControl
     }
 }
 
-/**
- * Add access control route.
- * Use the given [checker] to decides what requests to child routes will be accepted.
- * If provider names are empty, all providers will be used.
- * Default behavior is rejecting all request. To allow a request, the `accept()` in checker context must be call.
- */
-@ContextDsl
-fun Route.accessControl(vararg providerNames: String, checker: suspend AccessControlCheckerContext.() -> Unit, builder: Route.() -> Unit): Route {
-    val authorizationRoute = createChild(AccessControlRouteSelector())
-    application.feature(AccessControl).interceptPipeline(providerNames.toSet(), authorizationRoute, checker)
-    authorizationRoute.builder()
-    return authorizationRoute
-}
-
-@ContextDsl
-fun Route.accessControl(checker: suspend AccessControlCheckerContext.() -> Unit, builder: Route.() -> Unit): Route {
-    return accessControl(builder = builder, checker = checker, providerNames = emptyArray())
-}

@@ -6,13 +6,13 @@
 
     <groupId>com.shinonometn</groupId>
     <artifactId>ktor-server-access-control</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.1</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
 
-        <kotlin.version>1.4.20</kotlin.version>
+        <kotlin.version>1.4.32</kotlin.version>
         <logback.version>1.2.3</logback.version>
         <ktor.version>1.5.3</ktor.version>
     </properties>
@@ -47,13 +47,6 @@
             <version>${kotlin.version}</version>
             <scope>test</scope>
         </dependency>
-
-<!--        <dependency>-->
-<!--            <groupId>io.ktor</groupId>-->
-<!--            <artifactId>ktor-server-netty</artifactId>-->
-<!--            <version>${ktor.version}</version>-->
-<!--            <scope>test</scope>-->
-<!--        </dependency>-->
 
         <dependency>
             <groupId>io.ktor</groupId>
