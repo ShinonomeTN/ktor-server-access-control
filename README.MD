@@ -11,6 +11,14 @@ It is a very simple plugin for implementing access control feature in ktor appli
 
 ## Usage
 
+Currently it only available in our private maven repository. You can add this to your repository list.
+
+```
+https://nexus.shinonometn.com/repository/maven-public/
+```
+
+A simple example:
+
 ```kotlin
 install(AccessControl) {
     provider("App Token") {
