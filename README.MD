@@ -1,7 +1,7 @@
 # ktor-server-access-control
 
-[![Deployment](https://github.com/ShinonomeTN/koemans/actions/workflows/release-and-deploy.yml/badge.svg?branch=master)](https://github.com/ShinonomeTN/ktor-server-access-control/actions/workflows/release-and-deploy.yml)
-[![Test](https://github.com/ShinonomeTN/koemans/actions/workflows/test-maven.yml/badge.svg?branch=master)](https://github.com/ShinonomeTN/ktor-server-access-control/actions/workflows/test-maven.yml)
+[![Deployment](https://github.com/ShinonomeTN/ktor-server-access-control/actions/workflows/release-and-deploy.yml/badge.svg)](https://github.com/ShinonomeTN/ktor-server-access-control/actions/workflows/release-and-deploy.yml)
+[![Test](https://github.com/ShinonomeTN/ktor-server-access-control/actions/workflows/test-maven.yml/badge.svg)](https://github.com/ShinonomeTN/ktor-server-access-control/actions/workflows/test-maven.yml)
 [![Version](https://img.shields.io/github/v/release/ShinonomeTN/ktor-server-access-control?include_prereleases)](https://github.com/ShinonomeTN/ktor-server-access-control/releases)
 [![License](https://img.shields.io/github/license/ShinonomeTN/ktor-server-access-control)](https://github.com/ShinonomeTN/ktor-server-access-control/blob/master/LICENSE)
 
