@@ -6,6 +6,8 @@
 [![Version](https://img.shields.io/github/v/release/ShinonomeTN/ktor-server-access-control?include_prereleases)](https://github.com/ShinonomeTN/ktor-server-access-control/releases)
 [![License](https://img.shields.io/github/license/ShinonomeTN/ktor-server-access-control)](https://github.com/ShinonomeTN/ktor-server-access-control/blob/master/LICENSE)
 
+---
+
 Access control feature for Ktor Server
 
 It is a very simple plugin for implementing access control feature in ktor application
