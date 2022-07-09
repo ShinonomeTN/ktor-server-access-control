@@ -26,11 +26,11 @@ Or use our private repository
 https://nexus.shinonometn.com/repository/maven-public/
 ```
 
-A simple example:
+### A simple example
 
 ```kotlin
 install(AccessControl) {
-    provider("App Token") {
+    addMetaProvider("App Token") {
         val token = call.request.header["APP-TOKEN"] ?: return@provider
         it.put(token) // Put anything you want into AccessControlContext
     }
@@ -41,7 +41,7 @@ install(AccessControl) {
 routing {
     // If call satisfy some condition, accept it or reject
     // default behavior is reject, so accept() is must call.
-    accessControl({ if (meta == meta<String>()) reject() else accept() }) {
+    accessControl({ if (meta == meta<String>()) accept() }) {
         get {
             val accessControlContext = call.accessControl
             val token = accessControl.meta<String>()!!
@@ -50,4 +50,17 @@ routing {
     }
 }
 
+```
+
+### Customizing unauthorized response
+
+```kotlin
+install(AccessControl) {
+    unauthorized {
+        // Get reject reasons from AccessControlContext
+        val reasons : Map<String,String> = rejectReasons()
+        
+        call.respond(HttpStatusCode.Unauthorized, reasons)
+    }
+}
 ```

@@ -51,7 +51,12 @@ class AccessControl(debug : Boolean, configuration: Configuration) {
             authorizationInfoProviders.add(AccessControlMetaExtractor(name, extractor))
         }
 
+        @Deprecated("use 'unauthorized' instead.", ReplaceWith("unauthorized {}"), DeprecationLevel.WARNING)
         fun onUnAuthorized(handler: OnUnAuthorizedHandler) {
+            onUnAuthorized = handler
+        }
+
+        fun unauthorized(handler: OnUnAuthorizedHandler) {
             onUnAuthorized = handler
         }
     }

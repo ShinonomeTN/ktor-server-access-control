@@ -5,5 +5,6 @@ package com.shinonometn.ktor.server.access.control
  */
 interface AccessControlContextSnapshot : AccessControlMetaSnapshot {
     fun rejectReasons(): Map<String, String>
+
     val isRejected : Boolean
 }
