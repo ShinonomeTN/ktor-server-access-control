@@ -10,16 +10,16 @@ import org.junit.Assert.*
 import org.junit.Test
 import org.slf4j.LoggerFactory
 
-fun Application.testInstallModule() {
+fun Application.moduleTestApp() {
     class UserInfoBean(val username : String)
 
     install(AccessControl) {
-        metaProvider { c ->
-            call.request.header("Test-Tag")?.takeIf { it.isNotBlank() }?.let { c.put(it) }
+        addMetaExtractor {
+            request.header("Test-Tag")?.takeIf { it.isNotBlank() }?.let { addMeta(it) }
         }
 
-        provider("UserInfo") { c ->
-            call.request.cookies["user_info"]?.let { c.put(UserInfoBean(it)) }
+        addMetaExtractor("UserInfo") {
+            request.cookies["user_info"]?.let { addMeta(UserInfoBean(it)) }
         }
     }
 
@@ -58,7 +58,7 @@ class AccessControlFeatureKtTest {
 
     @Test
     fun `Test named access control`() {
-        withTestApplication(Application::testInstallModule) {
+        withTestApplication(Application::moduleTestApp) {
             handleRequest(HttpMethod.Get, "/has_user_info") {
                 addHeader("Cookie", "user_info=shinonometn")
             }.apply {
@@ -71,7 +71,7 @@ class AccessControlFeatureKtTest {
 
     @Test
     fun `Test plugin install`() {
-        withTestApplication(Application::testInstallModule) {
+        withTestApplication(Application::moduleTestApp) {
             handleRequest(HttpMethod.Get, "/").apply {
                 assertEquals("Hello World", response.content)
             }
@@ -80,7 +80,7 @@ class AccessControlFeatureKtTest {
 
     @Test
     fun `Test if contains a meta`() {
-        withTestApplication(Application::testInstallModule) {
+        withTestApplication(Application::moduleTestApp) {
             val tag = "Hello world!"
 
             handleRequest(HttpMethod.Get, "/need_a_test_tag") {
@@ -91,7 +91,7 @@ class AccessControlFeatureKtTest {
 
     @Test
     fun `Test reject when no meta`() {
-        withTestApplication(Application::testInstallModule) {
+        withTestApplication(Application::moduleTestApp) {
             handleRequest(HttpMethod.Get, "/need_a_test_tag").apply {
                 val responseStatus = response.status()
                 val responseContent = response.content
@@ -104,7 +104,7 @@ class AccessControlFeatureKtTest {
 
     @Test
     fun `Test reject has message`() {
-        withTestApplication(Application::testInstallModule) {
+        withTestApplication(Application::moduleTestApp) {
             handleRequest(HttpMethod.Get, "/reject_has_message").apply {
                 val responseStatus = response.status()
                 val responseContent = response.content

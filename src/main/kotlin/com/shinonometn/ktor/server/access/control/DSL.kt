@@ -14,7 +14,7 @@ import io.ktor.util.pipeline.*
 @ContextDsl
 fun Route.accessControl(vararg providerNames: String, checker: suspend AccessControlCheckerContext.() -> Unit, builder: Route.() -> Unit): Route {
     val authorizationRoute = createChild(AccessControlRouteSelector())
-    application.feature(AccessControl).interceptPipeline(providerNames.toSet(), authorizationRoute, checker)
+    application.feature(AccessControl).interceptPipeline(authorizationRoute, providerNames.toSet(), listOf(checker))
     authorizationRoute.builder()
     return authorizationRoute
 }
@@ -27,7 +27,7 @@ fun Route.accessControl(vararg providerNames: String, checker: suspend AccessCon
 @ContextDsl
 fun Route.accessControl(checker: suspend AccessControlCheckerContext.() -> Unit, builder: Route.() -> Unit): Route {
     val authorizationRoute = createChild(AccessControlRouteSelector())
-    application.feature(AccessControl).interceptPipeline(emptySet(), authorizationRoute, checker)
+    application.feature(AccessControl).interceptPipeline(authorizationRoute, emptySet(), listOf(checker))
     authorizationRoute.builder()
     return authorizationRoute
 }
@@ -38,18 +38,30 @@ fun Route.accessControl(checker: suspend AccessControlCheckerContext.() -> Unit,
  * Default behavior is rejecting all request. To allow a request, the `accept()` in checker context must be call.
  */
 @ContextDsl
-fun Route.accessControl(requirement : AccessControlRequirement, builder: Route.() -> Unit): Route {
+fun Route.accessControl(requirement: AccessControlRequirement, builder: Route.() -> Unit): Route {
     val authorizationRoute = createChild(AccessControlRouteSelector())
-    application.feature(AccessControl).interceptPipeline(requirement.providerNames, authorizationRoute, requirement.checker)
+    application.feature(AccessControl).interceptPipeline(authorizationRoute, requirement.providerNames, requirement.checkers)
     authorizationRoute.builder()
     return authorizationRoute
 }
 
-class AccessControlRequirement(vararg providerNames : String, val checker : AccessControlChecker) {
+class AccessControlRequirement(providerNames: List<String>, val checkers: List<AccessControlChecker>) {
     val providerNames = providerNames.toSet()
+
     companion object {
-        fun default(checker : AccessControlChecker) : AccessControlRequirement {
-            return AccessControlRequirement(checker = checker)
+        class Builder internal constructor(
+            private val providers : MutableList<String> = mutableListOf(),
+            private val checkers : MutableList<AccessControlChecker> = mutableListOf()
+        ) {
+            fun provider(providerName: String) = apply { providers.add(providerName) }
+
+            fun provider(vararg providerNames: String) = apply { providers.addAll(providerNames) }
+
+            fun checker(checker: AccessControlChecker) = apply { checkers.add(checker) }
+
+            fun build() = AccessControlRequirement(providers.toList(), checkers.toList())
         }
+
+        fun builder() = Builder()
     }
 }

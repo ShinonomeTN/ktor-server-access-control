@@ -9,21 +9,22 @@ import io.ktor.util.pipeline.*
 import org.slf4j.LoggerFactory
 import java.util.*
 
-internal typealias CallContext = PipelineContext<Unit, ApplicationCall>
-
+/**
+ * Access Control Checker
+ */
 typealias AccessControlChecker = suspend AccessControlCheckerContext.() -> Unit
 
-class AccessControlMetaExtractor(val name: String, val extractor: suspend CallContext.(AccessControlMetaProviderContext) -> Unit)
+class AccessControl(debug : Boolean, configuration: Configuration) {
 
-private typealias OnUnAuthorizedHandler = suspend CallContext.(AccessControlContextSnapshot) -> Unit
-
-class AccessControl(configuration: Configuration) {
-
-    private val providers: List<AccessControlMetaExtractor> = configuration.authorizationInfoProviders
+    private val extractors: List<AccessControlMetaExtractor> = configuration.authorizationInfoProviders
     private val onUnauthorized: OnUnAuthorizedHandler = configuration.onUnAuthorized
+
+    private val pipeline = AccessControlPipeline(debug)
 
     class Configuration {
         internal val authorizationInfoProviders = LinkedList<AccessControlMetaExtractor>()
+
+        var debug : Boolean? = null
 
         internal var onUnAuthorized: OnUnAuthorizedHandler = { c ->
             val reasons = c.rejectReasons()
@@ -31,15 +32,22 @@ class AccessControl(configuration: Configuration) {
             else call.respond(HttpStatusCode.Forbidden)
         }
 
-        @Deprecated("use provider(name, extractor) instead", ReplaceWith("provider(name, extractor)"))
-        fun metaProvider(provider: suspend CallContext.(AccessControlMetaProviderContext) -> Unit) {
-            provider("", provider)
+        @Deprecated("use provider(name, extractor) instead", ReplaceWith("provider(name, extractor)"), DeprecationLevel.ERROR)
+        fun metaProvider(provider: suspend KtorCallContext.(AccessControlMetaProviderContext) -> Unit) {
+            error("use provider(name, extractor) instead")
         }
 
-        fun provider(name: String, extractor: suspend CallContext.(AccessControlMetaProviderContext) -> Unit) {
-            if (authorizationInfoProviders.any { it.name == name }) {
-                throw IllegalArgumentException("Provider with name $name already registered.")
-            }
+        @Deprecated(
+            "use addMetaExtractor(name, extractor) instead",
+            ReplaceWith("addMetaExtractor(name, extractor)"),
+            level = DeprecationLevel.ERROR
+        )
+        fun provider(name: String, contextCallExtractor: suspend KtorCallContext.(AccessControlMetaProviderContext) -> Unit) {
+            error("use provider(name, extractor) instead")
+        }
+
+        fun addMetaExtractor(name : String = "default", extractor: suspend AccessControlMetaProviderContext.() -> Unit) {
+            require(authorizationInfoProviders.none { it.name == name }) { "Provider with name $name already registered." }
             authorizationInfoProviders.add(AccessControlMetaExtractor(name, extractor))
         }
 
@@ -59,26 +67,31 @@ class AccessControl(configuration: Configuration) {
 
         override fun install(pipeline: Application, configure: Configuration.() -> Unit): AccessControl {
             val configuration = Configuration().apply(configure)
-            return AccessControl(configuration)
+            return AccessControl(configuration.debug ?: pipeline.developmentMode, configuration)
         }
-
-        fun buildContext(provider : AccessControlMetaProviderContext.() -> Unit) : AccessControlCheckerContext =
-            AccessControlContextImpl().apply(provider)
     }
 
-    fun interceptPipeline(providerNames: Set<String>, routePipeline: Route, checker: AccessControlChecker) {
-        if (providers.isEmpty()) {
+    fun interceptPipeline(routePipeline: Route, providerNames: Set<String>, checkers: List<AccessControlChecker>) {
+        if (extractors.isEmpty()) {
             logger.warn("No provider configured. Access control for route '{}' will not be installed.", routePipeline.toString())
             return
         }
 
+        val pipeline = routePipeline.application.feature(AccessControl).pipeline
         routePipeline.insertPhaseBefore(ApplicationCallPipeline.Call, AccessControlPhase)
         routePipeline.intercept(AccessControlPhase) {
-            val context = AccessControlContextImpl.from(call)
-            (if (providerNames.isEmpty()) providers else providers.filter { providerNames.contains(it.name) })
-                .forEach { it.extractor(this, context) }
+            val extractors = if (providerNames.isEmpty()) extractors else extractors.filter { providerNames.contains(it.name) }
 
-            checker(context)
+            val context = AccessControlContextImpl(call.request, extractors, checkers)
+
+            call.attributes.put(AccessControlContextImpl.AttributeKey, context)
+
+            try {
+                pipeline.execute(context)
+            } catch (e : Exception) {
+                application.log.error("Error while processing AccessControl pipeline", e)
+                throw e
+            }
 
             if (!context.isRejected) return@intercept
 
@@ -94,95 +107,4 @@ class AccessControl(configuration: Configuration) {
  * current application call
  */
 val ApplicationCall.accessControl: AccessControlMetaSnapshot
-    get() = AccessControlContextImpl.from(this)
-
-/**
- * Route selector implement of AccessControl
- */
-class AccessControlRouteSelector : RouteSelector(RouteSelectorEvaluation.qualityTransparent) {
-    override fun evaluate(context: RoutingResolveContext, segmentIndex: Int): RouteSelectorEvaluation {
-        return RouteSelectorEvaluation(true, RouteSelectorEvaluation.qualityTransparent)
-    }
-
-    override fun toString(): String = "(access control)"
-}
-
-/**
- * Mutable AccessControlContext
- */
-interface AccessControlContext {
-    val meta: MutableCollection<Any>
-}
-
-/**
- * AccessControlContext for meta providers
- */
-interface AccessControlMetaProviderContext : AccessControlContext {
-    fun put(meta: Any) = this.meta.add(meta)
-    fun putAll(metas: Collection<Any>) = this.meta.addAll(metas)
-}
-
-/**
- * Readonly AccessControl Meta, containing [meta]s that extracted.
- */
-interface AccessControlMetaSnapshot {
-    val meta: Collection<Any>
-}
-
-/**
- * AccessControl context for checker. Providing basic method for checkers.
- * Metas are readonly.
- */
-interface AccessControlCheckerContext : AccessControlMetaSnapshot {
-
-    /**
-     * Providing reject reason with [title] and [message]
-     */
-    fun reject(title: String, message: String)
-
-    /**
-     * Providing reject reason by a title-to-message pair
-     */
-    fun reject(vararg reasons: Pair<String, String>) = reasons.forEach { reject(it.first, it.second) }
-
-    /**
-     * Pass the request
-     */
-    fun accept()
-}
-
-/**
- * Provides information to handlers or application call.
- */
-interface AccessControlContextSnapshot : AccessControlMetaSnapshot {
-    fun rejectReasons(): Map<String, String>
-    val isRejected : Boolean
-}
-
-class AccessControlContextImpl : AccessControlMetaProviderContext, AccessControlCheckerContext, AccessControlContextSnapshot {
-    override val meta: MutableCollection<Any> by lazy { LinkedList() }
-    private val rejectReasons: MutableMap<String, String> by lazy { HashMap() }
-    override var isRejected: Boolean = true
-        private set
-
-    override fun rejectReasons(): Map<String, String> {
-        isRejected = true
-        return rejectReasons.filterKeys { it.isNotEmpty() }
-    }
-
-    override fun accept() {
-        isRejected = false
-    }
-
-    override fun reject(title: String, message: String) {
-        isRejected = true
-        rejectReasons[title] = message
-    }
-
-    companion object {
-        private val AttributeKey = AttributeKey<AccessControlContextImpl>("AccessControlContext")
-
-        fun from(call: ApplicationCall) = call.attributes.computeIfAbsent(AttributeKey) { AccessControlContextImpl() }
-    }
-}
-
+    get() = attributes[AccessControlContextImpl.AttributeKey]
