@@ -26,6 +26,15 @@ Or use our private repository
 https://nexus.shinonometn.com/repository/maven-public/
 ```
 
+Maven:
+```xml
+<dependency>
+    <groupId>com.shinonometn</groupId>
+    <artifactId>ktor-server-access-control</artifactId>
+    <version>2.0</version>
+</dependency>
+```
+
 ### A simple example
 
 ```kotlin
