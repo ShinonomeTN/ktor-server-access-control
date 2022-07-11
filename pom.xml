@@ -6,7 +6,7 @@
 
     <groupId>com.shinonometn</groupId>
     <artifactId>ktor-server-access-control</artifactId>
-    <version>2.0-SNAPSHOT</version>
+    <version>2.0</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
