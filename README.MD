@@ -1,7 +1,6 @@
 # ktor-server-access-control
 
-[![Deployment@Github](https://github.com/ShinonomeTN/ktor-server-access-control/actions/workflows/deploy-github.yml/badge.svg)](https://github.com/ShinonomeTN/ktor-server-access-control/actions/workflows/deploy-github.yml)
-[![Deployment@ShinonomeTN](https://github.com/ShinonomeTN/ktor-server-access-control/actions/workflows/deploy-shinonometn.yml/badge.svg)](https://github.com/ShinonomeTN/ktor-server-access-control/actions/workflows/deploy-shinonometn.yml)
+[![Deployment](https://github.com/ShinonomeTN/ktor-server-access-control/actions/workflows/deploy-shinonometn.yml/badge.svg)](https://github.com/ShinonomeTN/ktor-server-access-control/actions/workflows/deploy-shinonometn.yml)
 [![Test](https://github.com/ShinonomeTN/ktor-server-access-control/actions/workflows/test-maven.yml/badge.svg)](https://github.com/ShinonomeTN/ktor-server-access-control/actions/workflows/test-maven.yml)
 [![Version](https://img.shields.io/github/v/release/ShinonomeTN/ktor-server-access-control?include_prereleases)](https://github.com/ShinonomeTN/ktor-server-access-control/releases)
 [![License](https://img.shields.io/github/license/ShinonomeTN/ktor-server-access-control)](https://github.com/ShinonomeTN/ktor-server-access-control/blob/master/LICENSE)
@@ -14,24 +13,14 @@ It is a very simple plugin for implementing access control feature in ktor appli
 
 ## Usage
 
-Now it is available on GitHub Packages. You can add this to your repository list.
-
-```
-https://maven.pkg.github.com/shinonometn/ktor-server-access-control/
-```
-
-Or use our private repository
-
-```
-https://nexus.shinonometn.com/repository/maven-public/
-```
+For repository url, please see [ShinonomeTN Public Maven Repository](https://github.com/ShinonomeTN/maven-public)
 
 Maven:
 ```xml
 <dependency>
     <groupId>com.shinonometn</groupId>
     <artifactId>ktor-server-access-control</artifactId>
-    <version>2.0</version>
+    <version>${release-or-snapshot-version}</version>
 </dependency>
 ```
 
