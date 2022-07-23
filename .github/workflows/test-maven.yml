@@ -6,8 +6,6 @@ name: Test
 on:
   push:
     branches: [ master ]
-  pull_request:
-    branches: [ master ]
 
 env:
   NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}

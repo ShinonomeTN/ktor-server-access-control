@@ -42,12 +42,12 @@
             <distributionManagement>
                 <repository>
                     <id>github-release</id>
-                    <url>https://maven.pkg.github.com/shinonometn/ktor-server-access-control/</url>
+                    <url>https://maven.pkg.github.com/shinonometn/maven-public/</url>
                     <uniqueVersion>true</uniqueVersion>
                 </repository>
                 <snapshotRepository>
                     <id>github-snapshot</id>
-                    <url>https://maven.pkg.github.com/shinonometn/ktor-server-access-control/</url>
+                    <url>https://maven.pkg.github.com/shinonometn/maven-public/</url>
                     <uniqueVersion>true</uniqueVersion>
                 </snapshotRepository>
             </distributionManagement>

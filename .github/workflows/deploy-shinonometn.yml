@@ -5,7 +5,7 @@ name: Deployment@ShinonomeTN
 
 on:
   release:
-    type: [published]
+    type: [released, prereleased]
 
 env:
   NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
