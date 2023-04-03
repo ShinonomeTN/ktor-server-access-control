@@ -9,11 +9,6 @@ import io.ktor.util.pipeline.*
 import org.slf4j.LoggerFactory
 import java.util.*
 
-/**
- * Access Control Checker
- */
-typealias AccessControlChecker = suspend AccessControlCheckerContext.() -> Unit
-
 class AccessControl(debug : Boolean, configuration: Configuration) {
 
     private val extractors: List<AccessControlMetaExtractor> = configuration.authorizationInfoProviders
@@ -26,10 +21,8 @@ class AccessControl(debug : Boolean, configuration: Configuration) {
 
         var debug : Boolean? = null
 
-        internal var onUnAuthorized: OnUnAuthorizedHandler = { c ->
-            val reasons = c.rejectReasons()
-            if (reasons.isNotEmpty()) call.respond(HttpStatusCode.Forbidden, reasons.entries.joinToString("\n") { it.key + it.value })
-            else call.respond(HttpStatusCode.Forbidden)
+        internal var onUnAuthorized: OnUnAuthorizedHandler = {_, reason ->
+            call.respond(HttpStatusCode.Forbidden, reason.toString())
         }
 
         @Deprecated("use provider(name, extractor) instead", ReplaceWith("provider(name, extractor)"), DeprecationLevel.ERROR)
@@ -93,16 +86,16 @@ class AccessControl(debug : Boolean, configuration: Configuration) {
 
             try {
                 pipeline.execute(context)
-            } catch (e : Exception) {
+            } catch (e: Exception) {
                 application.log.error("Error while processing AccessControl pipeline", e)
                 throw e
             }
 
-            if (!context.isRejected) return@intercept
-
-            onUnauthorized(context)
-
-            finish()
+            val result = context.attributes[AccessControlContextImpl.ProcessResultAttributeKey]
+            if (result is AccessControlCheckerResult.Rejected) {
+                onUnauthorized(context, result)
+                finish()
+            }
         }
     }
 }

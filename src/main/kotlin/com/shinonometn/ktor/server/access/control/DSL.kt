@@ -12,7 +12,7 @@ import io.ktor.util.pipeline.*
  */
 @Deprecated("Deprecated")
 @ContextDsl
-fun Route.accessControl(vararg providerNames: String, checker: suspend AccessControlCheckerContext.() -> Unit, builder: Route.() -> Unit): Route {
+fun Route.accessControl(vararg providerNames: String, checker: AccessControlChecker, builder: Route.() -> Unit): Route {
     val authorizationRoute = createChild(AccessControlRouteSelector())
     application.feature(AccessControl).interceptPipeline(authorizationRoute, providerNames.toSet(), listOf(checker))
     authorizationRoute.builder()
@@ -25,7 +25,7 @@ fun Route.accessControl(vararg providerNames: String, checker: suspend AccessCon
  * Default behavior is rejecting all request. To allow a request, the `accept()` in checker context must be call.
  */
 @ContextDsl
-fun Route.accessControl(checker: suspend AccessControlCheckerContext.() -> Unit, builder: Route.() -> Unit): Route {
+fun Route.accessControl(checker: AccessControlChecker, builder: Route.() -> Unit): Route {
     val authorizationRoute = createChild(AccessControlRouteSelector())
     application.feature(AccessControl).interceptPipeline(authorizationRoute, emptySet(), listOf(checker))
     authorizationRoute.builder()
@@ -43,25 +43,4 @@ fun Route.accessControl(requirement: AccessControlRequirement, builder: Route.()
     application.feature(AccessControl).interceptPipeline(authorizationRoute, requirement.providerNames, requirement.checkers)
     authorizationRoute.builder()
     return authorizationRoute
-}
-
-class AccessControlRequirement(providerNames: List<String>, val checkers: List<AccessControlChecker>) {
-    val providerNames = providerNames.toSet()
-
-    companion object {
-        class Builder internal constructor(
-            private val providers : MutableList<String> = mutableListOf(),
-            private val checkers : MutableList<AccessControlChecker> = mutableListOf()
-        ) {
-            fun provider(providerName: String) = apply { providers.add(providerName) }
-
-            fun provider(vararg providerNames: String) = apply { providers.addAll(providerNames) }
-
-            fun checker(checker: AccessControlChecker) = apply { checkers.add(checker) }
-
-            fun build() = AccessControlRequirement(providers.toList(), checkers.toList())
-        }
-
-        fun builder() = Builder()
-    }
 }

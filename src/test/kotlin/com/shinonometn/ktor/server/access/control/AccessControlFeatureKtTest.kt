@@ -28,13 +28,13 @@ fun Application.moduleTestApp() {
             call.respondText { "Hello World" }
         }
 
-        accessControl({ if (true == meta<String>()?.isNotBlank()) accept() }) {
+        accessControl({ if (true == meta<String>()?.isNotBlank()) accept() else reject() }) {
             get("/need_a_test_tag") {
                 call.respondText { call.accessControl.meta<String>()!! }
             }
         }
 
-        val needTagChecker : suspend AccessControlCheckerContext.() -> Unit = {
+        val needTagChecker : AccessControlChecker = {
             if (true == meta<String>()?.isNotBlank()) accept() else reject("Message: ", "Need a Test-Tag Header.")
         }
 
@@ -44,7 +44,7 @@ fun Application.moduleTestApp() {
             }
         }
 
-        accessControl("UserInfo", checker = { if(meta<UserInfoBean>()?.username == "shinonometn") accept() }) {
+        accessControl("UserInfo", checker = { if(meta<UserInfoBean>()?.username == "shinonometn") accept() else reject() }) {
             get("/has_user_info") {
                 call.respond(call.accessControl.meta<UserInfoBean>()!!.username)
             }
@@ -96,7 +96,6 @@ class AccessControlFeatureKtTest {
                 val responseStatus = response.status()
                 val responseContent = response.content
                 assertEquals(HttpStatusCode.Forbidden, responseStatus)
-                assertNull(responseContent)
                 logger.info("Test reject when no meta. Returns code '{}', content '{}'", responseStatus, responseContent)
             }
         }
