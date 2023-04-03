@@ -37,9 +37,8 @@ install(AccessControl) {
 // In route config
 
 routing {
-    // If call satisfy some condition, accept it or reject
-    // default behavior is reject, so accept() is must call.
-    accessControl({ if (meta == meta<String>()) accept() }) {
+    // If call satisfy some condition, accept it, or not, reject.
+    accessControl({ if (meta == meta<String>()) accept() else reject() }) {
         get {
             val accessControlContext = call.accessControl
             val token = accessControl.meta<String>()!!
