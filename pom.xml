@@ -6,15 +6,15 @@
 
     <groupId>com.shinonometn</groupId>
     <artifactId>ktor-server-access-control</artifactId>
-    <version>2.0</version>
+    <version>3.0</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
 
-        <kotlin.version>1.4.32</kotlin.version>
-        <logback.version>1.2.3</logback.version>
-        <ktor.version>1.5.3</ktor.version>
+        <kotlin.version>1.6.10</kotlin.version>
+        <logback.version>1.2.5</logback.version>
+        <ktor.version>1.6.8</ktor.version>
     </properties>
 
     <repositories>
