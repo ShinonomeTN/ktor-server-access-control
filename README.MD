@@ -9,18 +9,23 @@
 
 Access control feature for Ktor Server
 
-It is a very simple plugin for implementing access control feature in ktor application
+It is a very simple plugin for implementing access control feature in ktor application.
+
+### About ktor 2.0+
+
+This is a legacy project for our old applications using ktor 1.6.8. 
+We will create a new project and refactor ktor-server-access-control for ktor 2.0+.
 
 ## Usage
 
-For repository url, please see [ShinonomeTN Public Maven Repository](https://github.com/ShinonomeTN/maven-public)
+Please see [ShinonomeTN Public Maven Repository](https://github.com/ShinonomeTN/maven-public) for repository urls and repository manual.
 
 Maven:
 ```xml
 <dependency>
     <groupId>com.shinonometn</groupId>
     <artifactId>ktor-server-access-control</artifactId>
-    <version>${release-or-snapshot-version}</version>
+    <version>${release-version}</version>
 </dependency>
 ```
 
