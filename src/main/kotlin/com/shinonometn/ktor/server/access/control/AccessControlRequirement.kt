@@ -2,7 +2,7 @@ package com.shinonometn.ktor.server.access.control
 
 interface AccessControlRequirement {
     /**
-     * Meta providers required by this predicate
+     * Meta providers required by this predicate.
      */
     val providerNames: Set<String>
 

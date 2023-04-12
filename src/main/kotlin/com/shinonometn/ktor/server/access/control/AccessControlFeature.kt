@@ -11,7 +11,7 @@ import java.util.*
 
 class AccessControl(debug : Boolean, configuration: Configuration) {
 
-    private val extractors: List<AccessControlMetaExtractor> = configuration.authorizationInfoProviders
+    private val metaProviders: List<AccessControlMetaExtractor> = configuration.authorizationInfoProviders
     private val onUnauthorized: OnUnAuthorizedHandler = configuration.onUnAuthorized
 
     private val pipeline = AccessControlPipeline(debug)
@@ -35,7 +35,7 @@ class AccessControl(debug : Boolean, configuration: Configuration) {
          *
          * If named [name] already registered, throw an error.
          */
-        fun addMetaProvider(name : String = "default", provider: suspend AccessControlMetaProviderContext.() -> Unit) {
+        fun addMetaProvider(name : String = META_PROVIDER_DEFAULT, provider: suspend AccessControlMetaProviderContext.() -> Unit) {
             require(authorizationInfoProviders.none { it.name == name }) { "Provider with name $name already registered." }
             authorizationInfoProviders.add(AccessControlMetaExtractor(name, provider))
         }
@@ -58,19 +58,18 @@ class AccessControl(debug : Boolean, configuration: Configuration) {
         override val key: AttributeKey<AccessControl> = AttributeKey("AccessControl")
         internal val logger = LoggerFactory.getLogger("AccessControlFeature")
 
-        // Don't need it now
-        // val AuthorizationPhase = PipelinePhase("Authorization")
-
         val AccessControlPhase = PipelinePhase("AccessControl")
 
         override fun install(pipeline: Application, configure: Configuration.() -> Unit): AccessControl {
             val configuration = Configuration().apply(configure)
             return AccessControl(configuration.debug ?: pipeline.developmentMode, configuration)
         }
+
+        const val META_PROVIDER_DEFAULT = "default"
     }
 
     fun interceptPipeline(routePipeline: Route, providerNames: Set<String>, checkers: List<AccessControlChecker>) {
-        if (extractors.isEmpty()) logger.warn(
+        if (metaProviders.isEmpty()) logger.warn(
             "No provider configured. Checker for route '{}' may lack of info. Register an no-op extractor to hide this message.",
             routePipeline.toString()
         )
@@ -78,7 +77,7 @@ class AccessControl(debug : Boolean, configuration: Configuration) {
         val pipeline = routePipeline.application.feature(AccessControl).pipeline
         routePipeline.insertPhaseBefore(ApplicationCallPipeline.Call, AccessControlPhase)
         routePipeline.intercept(AccessControlPhase) {
-            val extractors = if (providerNames.isEmpty()) extractors else extractors.filter { providerNames.contains(it.name) }
+            val extractors = if (providerNames.isEmpty()) metaProviders else metaProviders.filter { providerNames.contains(it.name) }
 
             // Get current access control context
             val context = call.attributes.computeIfAbsent(AccessControlContextImpl.AttributeKey) {
