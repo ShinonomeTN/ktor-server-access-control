@@ -8,7 +8,7 @@ class AccessControlPipeline(
     init {
         intercept(MetaExtractPhase) {
             val extractors = context.extractors
-            extractors.forEach { it.extractor(context) }
+            extractors.forEach { it.provider(context) }
         }
 
         intercept(CheckPhase) {
