@@ -25,28 +25,19 @@ class AccessControl(debug : Boolean, configuration: Configuration) {
             call.respond(HttpStatusCode.Forbidden, reason.toString())
         }
 
-        @Deprecated("use provider(name, extractor) instead", ReplaceWith("provider(name, extractor)"), DeprecationLevel.ERROR)
-        fun metaProvider(provider: suspend KtorCallContext.(AccessControlMetaProviderContext) -> Unit) {
-            error("use provider(name, extractor) instead")
-        }
-
-        @Deprecated(
-            "use addMetaExtractor(name, extractor) instead",
-            ReplaceWith("addMetaExtractor(name, extractor)"),
-            level = DeprecationLevel.ERROR
-        )
-        fun provider(name: String, contextCallExtractor: suspend KtorCallContext.(AccessControlMetaProviderContext) -> Unit) {
-            error("use provider(name, extractor) instead")
+        @Deprecated("Renamed. Use `addMetaProvider()` instead", ReplaceWith("addMetaProvider()"), DeprecationLevel.WARNING)
+        fun addMetaExtractor(name : String = "default", extractor: suspend AccessControlMetaProviderContext.() -> Unit) {
+            addMetaProvider(name, extractor)
         }
 
         /**
-         * Register a meta extractor. If no [name] provided, it will register with name 'default'.
+         * Register a meta provider. If no [name] provided, it will register with name 'default'.
          *
-         * If extractor named [name] already register, throw an error.
+         * If named [name] already registered, throw an error.
          */
-        fun addMetaExtractor(name : String = "default", extractor: suspend AccessControlMetaProviderContext.() -> Unit) {
+        fun addMetaProvider(name : String = "default", provider: suspend AccessControlMetaProviderContext.() -> Unit) {
             require(authorizationInfoProviders.none { it.name == name }) { "Provider with name $name already registered." }
-            authorizationInfoProviders.add(AccessControlMetaExtractor(name, extractor))
+            authorizationInfoProviders.add(AccessControlMetaExtractor(name, provider))
         }
 
         @Deprecated("use 'unauthorized' instead.", ReplaceWith("unauthorized {}"), DeprecationLevel.WARNING)
