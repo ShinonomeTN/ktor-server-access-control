@@ -22,7 +22,7 @@ class AccessControl(debug : Boolean, configuration: Configuration) {
         var debug : Boolean? = null
 
         internal var onUnAuthorized: OnUnAuthorizedHandler = {_, reason ->
-            call.respond(HttpStatusCode.Forbidden, reason.toString())
+            call.respond(DEFAULT_REJECT_STATUS_CODE, reason.toString())
         }
 
         @Deprecated("Renamed. Use `addMetaProvider()` instead", ReplaceWith("addMetaProvider()"), DeprecationLevel.WARNING)
@@ -66,6 +66,8 @@ class AccessControl(debug : Boolean, configuration: Configuration) {
         }
 
         const val META_PROVIDER_DEFAULT = "default"
+
+        val DEFAULT_REJECT_STATUS_CODE = HttpStatusCode.Forbidden
     }
 
     fun interceptPipeline(routePipeline: Route, providerNames: Set<String>, checkers: List<AccessControlChecker>) {

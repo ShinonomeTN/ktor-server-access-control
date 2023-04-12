@@ -13,15 +13,33 @@ interface AccessControlMetaProviderContext : AccessControlContext {
     @Deprecated("use addMeta() instead", ReplaceWith("addMeta()"))
     fun putAll(metas: Collection<Any>) = addMeta(metas)
 
-    fun addMeta(meta : Any) = this.meta.add(meta)
-
-    fun addMeta(metas : Collection<Any>) {
-        if(metas.isNotEmpty()) this.meta.addAll(metas)
+    /**
+     * Add a meta.
+     *
+     * Do nothing if [meta] is null
+     */
+    fun addMeta(meta : Any?) {
+        this.meta.add(meta ?: return)
     }
 
-    fun addMeta(vararg meta : Any) {
-        if(meta.isNotEmpty()) this.meta.addAll(meta)
+    /**
+     * Add a lot of metas
+     *
+     * @param metas list of meta, null values will be ignored.
+     */
+    fun addMeta(metas : Collection<Any?>) {
+        this.meta.addAll(metas.filterNotNull().takeIf { it.isNotEmpty() } ?: return)
     }
 
+    /**
+     * Add a bunch of metas
+     *
+     * @param meta meta, null values will be ignored.
+     */
+    fun addMeta(vararg meta : Any?) {
+        this.meta.addAll(meta.filterNotNull().takeIf { it.isNotEmpty() } ?: return)
+    }
+
+    /** Current request */
     val request : ApplicationRequest
 }
