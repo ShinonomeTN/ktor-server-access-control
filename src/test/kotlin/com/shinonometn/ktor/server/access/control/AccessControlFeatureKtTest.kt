@@ -14,20 +14,26 @@ fun Application.moduleTestApp() {
     class UserInfoBean(val username : String)
 
     install(AccessControl) {
+        // Add a meta extractor, extracting `Test-Tag` header and put the String
+        // Value into the meta bucket
         addMetaExtractor {
             request.header("Test-Tag")?.takeIf { it.isNotBlank() }?.let { addMeta(it) }
         }
 
+        // Add a meta extractor, extracting `user_info` cookie and construct
+        // a UserInfoBean and put it into the meta bucket
         addMetaExtractor("UserInfo") {
             request.cookies["user_info"]?.let { addMeta(UserInfoBean(it)) }
         }
     }
 
     routing {
+        // Simple hello world api
         get {
             call.respondText { "Hello World" }
         }
 
+        // A route responding `Test-Tag` header's value
         accessControl({ if (true == meta<String>()?.isNotBlank()) accept() else reject() }) {
             get("/need_a_test_tag") {
                 call.respondText { call.accessControl.meta<String>()!! }
@@ -38,6 +44,7 @@ fun Application.moduleTestApp() {
             if (true == meta<String>()?.isNotBlank()) accept() else reject("Message: ", "Need a Test-Tag Header.")
         }
 
+        //
         accessControl(needTagChecker) {
             get("/reject_has_message") {
                 call.respondText { call.accessControl.meta<String>()!! }

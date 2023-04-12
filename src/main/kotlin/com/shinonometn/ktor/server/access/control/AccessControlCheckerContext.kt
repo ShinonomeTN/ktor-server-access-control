@@ -1,6 +1,7 @@
 package com.shinonometn.ktor.server.access.control
 
 import io.ktor.application.*
+import io.ktor.util.*
 
 /**
  * AccessControl context for checker. Providing basic method for checkers.
@@ -10,6 +11,9 @@ interface AccessControlCheckerContext : AccessControlMetaSnapshot {
 
     /** current application */
     val application: Application
+
+    /** current context attributes */
+    val attributes : Attributes
 
     /**
      * Reject the request.

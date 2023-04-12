@@ -1,11 +1,9 @@
 package com.shinonometn.ktor.server.access.control
 
-import io.ktor.util.*
-
 /**
  * Readonly AccessControl Meta, containing [meta]s that extracted.
  */
 interface AccessControlMetaSnapshot {
+    /** The context's meta bucket. Storing simple values */
     val meta: Collection<Any>
-    val attributes: Attributes
 }

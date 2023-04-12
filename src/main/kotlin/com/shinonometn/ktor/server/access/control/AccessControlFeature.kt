@@ -39,6 +39,11 @@ class AccessControl(debug : Boolean, configuration: Configuration) {
             error("use provider(name, extractor) instead")
         }
 
+        /**
+         * Register a meta extractor. If no [name] provided, it will register with name 'default'.
+         *
+         * If extractor named [name] already register, throw an error.
+         */
         fun addMetaExtractor(name : String = "default", extractor: suspend AccessControlMetaProviderContext.() -> Unit) {
             require(authorizationInfoProviders.none { it.name == name }) { "Provider with name $name already registered." }
             authorizationInfoProviders.add(AccessControlMetaExtractor(name, extractor))
@@ -49,9 +54,13 @@ class AccessControl(debug : Boolean, configuration: Configuration) {
             onUnAuthorized = handler
         }
 
-        fun unauthorized(handler: OnUnAuthorizedHandler) {
-            onUnAuthorized = handler
-        }
+        /**
+         * Handle request when access control checker result returns 'Reject'.
+         */
+        fun doAfterReject(handler: OnUnAuthorizedHandler) { onUnAuthorized = handler }
+
+        @Deprecated("use 'doAfterReject' instead", ReplaceWith("doAfterReject {}"), DeprecationLevel.WARNING)
+        fun unauthenticated(handler: OnUnAuthorizedHandler) = doAfterReject(handler)
     }
 
     companion object Feature : ApplicationFeature<Application, Configuration, AccessControl> {
@@ -70,29 +79,32 @@ class AccessControl(debug : Boolean, configuration: Configuration) {
     }
 
     fun interceptPipeline(routePipeline: Route, providerNames: Set<String>, checkers: List<AccessControlChecker>) {
-        if (extractors.isEmpty()) {
-            logger.warn("No provider configured. Access control for route '{}' will not be installed.", routePipeline.toString())
-            return
-        }
+        if (extractors.isEmpty()) logger.warn(
+            "No provider configured. Checker for route '{}' may lack of info. Register an no-op extractor to hide this message.",
+            routePipeline.toString()
+        )
 
         val pipeline = routePipeline.application.feature(AccessControl).pipeline
         routePipeline.insertPhaseBefore(ApplicationCallPipeline.Call, AccessControlPhase)
         routePipeline.intercept(AccessControlPhase) {
             val extractors = if (providerNames.isEmpty()) extractors else extractors.filter { providerNames.contains(it.name) }
 
-            val context = AccessControlContextImpl(call.request, extractors, checkers)
+            // Get current access control context
+            val context = call.attributes.computeIfAbsent(AccessControlContextImpl.AttributeKey) {
+                AccessControlContextImpl(call.request, extractors, checkers)
+            }
 
-            call.attributes.put(AccessControlContextImpl.AttributeKey, context)
-
-            try {
+            val result = try {
                 pipeline.execute(context)
+                // Get process result from context
+                context.attributes[AccessControlContextImpl.ProcessResultAttributeKey]
             } catch (e: Exception) {
                 application.log.error("Error while processing AccessControl pipeline", e)
                 throw e
             }
 
-            val result = context.attributes[AccessControlContextImpl.ProcessResultAttributeKey]
             if (result is AccessControlCheckerResult.Rejected) {
+                // Do reject action
                 onUnauthorized(context, result)
                 finish()
             }
