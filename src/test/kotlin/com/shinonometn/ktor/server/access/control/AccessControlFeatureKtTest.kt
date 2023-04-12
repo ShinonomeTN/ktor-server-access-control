@@ -10,19 +10,83 @@ import org.junit.Assert.*
 import org.junit.Test
 import org.slf4j.LoggerFactory
 
-fun Application.moduleTestApp() {
+class AccessControlFeatureKtTest {
+
+    private val logger = LoggerFactory.getLogger("AccessControlFeatureKtTest")
+
+    @Test
+    fun `Test named access control`() {
+        withTestApplication(Application::moduleTestGuardFunctionsApp) {
+            handleRequest(HttpMethod.Get, "/has_user_info") {
+                addHeader("Cookie", "user_info=shinonometn")
+            }.apply {
+                assertEquals(HttpStatusCode.OK, response.status())
+                assertEquals("shinonometn", response.content)
+                assertTrue(accessControl.meta.size == 1)
+            }
+        }
+    }
+
+    @Test
+    fun `Test plugin install`() {
+        withTestApplication(Application::moduleTestGuardFunctionsApp) {
+            handleRequest(HttpMethod.Get, "/").apply {
+                assertEquals("Hello World", response.content)
+            }
+        }
+    }
+
+    @Test
+    fun `Test if contains a meta`() {
+        withTestApplication(Application::moduleTestGuardFunctionsApp) {
+            val tag = "Hello world!"
+
+            handleRequest(HttpMethod.Get, "/need_a_test_tag") {
+                addHeader("Test-Tag", tag)
+            }.apply { assertEquals(tag, response.content) }
+        }
+    }
+
+    @Test
+    fun `Test reject when no meta`() {
+        withTestApplication(Application::moduleTestGuardFunctionsApp) {
+            handleRequest(HttpMethod.Get, "/need_a_test_tag").apply {
+                val responseStatus = response.status()
+                val responseContent = response.content
+                assertEquals(HttpStatusCode.Forbidden, responseStatus)
+                logger.info("Test reject when no meta. Returns code '{}', content '{}'", responseStatus, responseContent)
+            }
+        }
+    }
+
+    @Test
+    fun `Test reject has message`() {
+        withTestApplication(Application::moduleTestGuardFunctionsApp) {
+            handleRequest(HttpMethod.Get, "/reject_has_message").apply {
+                val responseStatus = response.status()
+                val responseContent = response.content
+                assertEquals(HttpStatusCode.Forbidden, responseStatus)
+                assertNotNull(responseContent)
+                logger.info("Test reject when no meta and has message. Returns code '{}', content '{}'", responseStatus, responseContent)
+            }
+        }
+    }
+}
+
+/** App module for access control component tests */
+fun Application.moduleTestGuardFunctionsApp() {
     class UserInfoBean(val username : String)
 
     install(AccessControl) {
         // Add a meta extractor, extracting `Test-Tag` header and put the String
         // Value into the meta bucket
-        addMetaExtractor {
+        addMetaProvider {
             request.header("Test-Tag")?.takeIf { it.isNotBlank() }?.let { addMeta(it) }
         }
 
         // Add a meta extractor, extracting `user_info` cookie and construct
         // a UserInfoBean and put it into the meta bucket
-        addMetaExtractor("UserInfo") {
+        addMetaProvider("UserInfo") {
             request.cookies["user_info"]?.let { addMeta(UserInfoBean(it)) }
         }
     }
@@ -54,69 +118,6 @@ fun Application.moduleTestApp() {
         accessControl("UserInfo", checker = { if(meta<UserInfoBean>()?.username == "shinonometn") accept() else reject() }) {
             get("/has_user_info") {
                 call.respond(call.accessControl.meta<UserInfoBean>()!!.username)
-            }
-        }
-    }
-}
-
-class AccessControlFeatureKtTest {
-
-    private val logger = LoggerFactory.getLogger("AccessControlFeatureKtTest")
-
-    @Test
-    fun `Test named access control`() {
-        withTestApplication(Application::moduleTestApp) {
-            handleRequest(HttpMethod.Get, "/has_user_info") {
-                addHeader("Cookie", "user_info=shinonometn")
-            }.apply {
-                assertEquals(HttpStatusCode.OK, response.status())
-                assertEquals("shinonometn", response.content)
-                assertTrue(accessControl.meta.size == 1)
-            }
-        }
-    }
-
-    @Test
-    fun `Test plugin install`() {
-        withTestApplication(Application::moduleTestApp) {
-            handleRequest(HttpMethod.Get, "/").apply {
-                assertEquals("Hello World", response.content)
-            }
-        }
-    }
-
-    @Test
-    fun `Test if contains a meta`() {
-        withTestApplication(Application::moduleTestApp) {
-            val tag = "Hello world!"
-
-            handleRequest(HttpMethod.Get, "/need_a_test_tag") {
-                addHeader("Test-Tag", tag)
-            }.apply { assertEquals(tag, response.content) }
-        }
-    }
-
-    @Test
-    fun `Test reject when no meta`() {
-        withTestApplication(Application::moduleTestApp) {
-            handleRequest(HttpMethod.Get, "/need_a_test_tag").apply {
-                val responseStatus = response.status()
-                val responseContent = response.content
-                assertEquals(HttpStatusCode.Forbidden, responseStatus)
-                logger.info("Test reject when no meta. Returns code '{}', content '{}'", responseStatus, responseContent)
-            }
-        }
-    }
-
-    @Test
-    fun `Test reject has message`() {
-        withTestApplication(Application::moduleTestApp) {
-            handleRequest(HttpMethod.Get, "/reject_has_message").apply {
-                val responseStatus = response.status()
-                val responseContent = response.content
-                assertEquals(HttpStatusCode.Forbidden, responseStatus)
-                assertNotNull(responseContent)
-                logger.info("Test reject when no meta and has message. Returns code '{}', content '{}'", responseStatus, responseContent)
             }
         }
     }
