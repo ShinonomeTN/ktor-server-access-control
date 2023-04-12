@@ -7,13 +7,11 @@ package com.shinonometn.ktor.server.access.control
  */
 sealed interface AccessControlCheckerResult {
     val isRejected : Boolean
+        get() = this is Rejected
 
-    class Passed internal constructor(val finish : Boolean) : AccessControlCheckerResult {
-        override val isRejected: Boolean = true
-    }
+    class Passed internal constructor(val finish : Boolean) : AccessControlCheckerResult
 
     class Rejected internal constructor(val reason : String, val message : String) : AccessControlCheckerResult {
-        override val isRejected: Boolean = false
         override fun toString(): String = when {
             reason.isBlank() -> message
             message.isBlank() -> reason
