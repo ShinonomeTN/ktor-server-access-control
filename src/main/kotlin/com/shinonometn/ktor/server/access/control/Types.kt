@@ -10,4 +10,4 @@ typealias AccessControlChecker = suspend AccessControlCheckerContext.() -> Acces
 
 internal typealias KtorCallContext = PipelineContext<Unit, ApplicationCall>
 
-internal typealias OnUnAuthorizedHandler = suspend KtorCallContext.(AccessControlContextSnapshot, AccessControlCheckerResult.Rejected) -> Unit
+internal typealias OnUnAuthorizedHandler = suspend KtorCallContext.(context: AccessControlContextSnapshot, reason: AccessControlCheckerResult.Rejected) -> Unit
