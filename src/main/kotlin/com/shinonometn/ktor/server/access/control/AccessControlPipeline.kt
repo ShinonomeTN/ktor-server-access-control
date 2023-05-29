@@ -6,19 +6,11 @@ class AccessControlPipeline(
     override val developmentMode: Boolean = false
 ) : Pipeline<Unit, AccessControlContextImpl>(MetaExtractPhase, CheckPhase) {
     init {
-        intercept(MetaExtractPhase) {
-            val extractors = context.extractors
-            extractors.forEach { it.provider(context) }
-        }
+        intercept(MetaExtractPhase) { context.refreshMeta() }
 
         intercept(CheckPhase) {
-            val checkers = context.checkers
-            for (checker in checkers) {
-                val result = checker(context)
-                context.attributes.put(AccessControlContextImpl.ProcessResultAttributeKey, result)
-                if (result.isRejected) break
-                if (result is AccessControlCheckerResult.Passed && result.finish) break
-            }
+            val result = context.evaluateChecker()
+            context.attributes.put(AccessControlContextImpl.ProcessResultAttributeKey, result)
         }
     }
 

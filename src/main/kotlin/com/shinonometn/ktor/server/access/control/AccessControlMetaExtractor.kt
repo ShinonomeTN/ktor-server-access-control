@@ -8,15 +8,14 @@ interface AccessControlMetaExtractor {
     val name : String
 
     /** Provider function */
-    val provider : suspend AccessControlMetaProviderContext.() -> Unit
+    val extractor : suspend AccessControlMetaProviderContext.() -> Unit
 
 
     companion object {
         /** Create an AccessControlMetaProvider */
-        operator fun invoke(name : String, provider : suspend AccessControlMetaProviderContext.() -> Unit) = object : AccessControlMetaExtractor {
+        operator fun invoke(name : String, extractor : suspend AccessControlMetaProviderContext.() -> Unit) = object : AccessControlMetaExtractor {
             override val name: String = name
-            override val provider: suspend AccessControlMetaProviderContext.() -> Unit = provider
-
+            override val extractor: suspend AccessControlMetaProviderContext.() -> Unit = extractor
         }
     }
 }

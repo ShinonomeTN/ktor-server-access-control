@@ -7,8 +7,8 @@ import java.util.*
 
 class AccessControlContextImpl(
     override val request: ApplicationRequest,
-    internal val extractors: List<AccessControlMetaExtractor>,
-    internal val checkers: List<AccessControlChecker>
+    private val extractors: List<AccessControlMetaExtractor>,
+    private val checker: AccessControlChecker
 ) : AccessControlMetaProviderContext, AccessControlCheckerContext, AccessControlContextSnapshot {
 
     override val meta: MutableCollection<Any> by lazy {
@@ -25,6 +25,13 @@ class AccessControlContextImpl(
         if (result is AccessControlCheckerResult.Rejected) return result
         return null
     }
+
+    internal suspend fun refreshMeta() {
+        if(meta.isNotEmpty()) meta.clear()
+        extractors.forEach { it.extractor(this) }
+    }
+
+    internal suspend fun evaluateChecker(): AccessControlCheckerResult = checker(this)
 
     companion object {
         internal val AttributeKey = AttributeKey<AccessControlContextImpl>("AccessControlContext")

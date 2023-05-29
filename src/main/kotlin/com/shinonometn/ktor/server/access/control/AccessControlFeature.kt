@@ -70,7 +70,7 @@ class AccessControl(debug : Boolean, configuration: Configuration) {
         val DEFAULT_REJECT_STATUS_CODE = HttpStatusCode.Forbidden
     }
 
-    fun interceptPipeline(routePipeline: Route, providerNames: Set<String>, checkers: List<AccessControlChecker>) {
+    fun interceptPipeline(routePipeline: Route, providerNames: Set<String>, checker: AccessControlChecker) {
         if (metaProviders.isEmpty()) logger.warn(
             "No provider configured. Checker for route '{}' may lack of info. Register an no-op extractor to hide this message.",
             routePipeline.toString()
@@ -83,7 +83,7 @@ class AccessControl(debug : Boolean, configuration: Configuration) {
 
             // Get current access control context
             val context = call.attributes.computeIfAbsent(AccessControlContextImpl.AttributeKey) {
-                AccessControlContextImpl(call.request, extractors, checkers)
+                AccessControlContextImpl(call.request, extractors, checker)
             }
 
             val result = try {
