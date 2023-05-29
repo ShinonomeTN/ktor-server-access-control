@@ -14,7 +14,7 @@ It is a very simple plugin for implementing access control feature in ktor appli
 ### About ktor 2.0+
 
 This is a legacy project for our old applications using ktor 1.6.8. 
-We will refactor ktor-server-access-control in a new repository for ktor 2.0+ in future.
+We will refactor ktor-server-access-control in a new repository for ktor 2.0+ in the future.
 
 ## Usage
 
