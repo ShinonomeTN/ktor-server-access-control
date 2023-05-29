@@ -66,3 +66,76 @@ install(AccessControl) {
     }
 }
 ```
+
+### Reusing expressions
+`accessControl()` takes a lambda as it's first parameter. You can create and save it for later use, 
+or event combining those lambda functions. 
+```kotlin
+val requireSession = AccessControlChecker { if(meta<UserSession>() != null) accepe() else reject() }
+val requireAdmin = AccessControlChecker { if(isAdmin()) accept() else reject() }
+val requireLoggedIn = AccessControlChecker { if(isSessionLoggedIn()) accept() else reject() }
+    
+routing {
+    accessControl(requireSession or requireLoggedIn) {
+        get("/homepage") {
+            call.respond("Hello User!")
+        }
+    }
+    
+    accessControl(requireSession and requireAdmin) {
+        get("/admin") {
+            call.respond("Hello admin!")
+        }
+    }
+    
+    accessControl(requireLoggedIn.not()) {
+        post("/logout") {
+            call.respond("You are logged out.")
+        }
+    }
+}
+```
+
+### AccessControlMetaSnapshot 
+
+Information of AccessControlContext can access via interface `AccessControlMetaSnapshot`.
+You can add extension function to do some useful things such as check user session state.
+
+```kotlin
+fun AccessControlMetaSnapshot.isUserLoggedIn() : Boolean {
+    val session = metas<UserSession>() ?: return false
+    return session.isLoggedIn()
+}
+
+val requireLoggedIn = AccessControlChecker { if(isUserLoggedIn()) accept() else reject() }
+
+routing {
+    accessControl(requireLoggedIn) {
+        get("/homepage") {
+            call.respond("Hello User!")
+        }
+    }
+}
+
+```
+
+### Validate access control in-place
+
+You can access `checkAccessControl()` from ApplicationCall and do additional checks for permissions.
+
+```kotlin
+val requireAdmin = AccessControlChecker { if(isAdmin()) accept() else reject() }
+val requireLoggedIn = AccessControlChecker { if(isSessionLoggedIn()) accept() else reject() }
+
+routing {
+    accessControl(requireLoggedIn) {
+        get("/admin") {
+            val context = call.checkAccessControl(requireAdmin)
+            if(context.result() is AccessControlCheckerResult.Pass)
+                return@get call.respond("Welcome, admin!")
+            
+            call.respond(HttpStatusCode.Forbidden, "You shall not pass!")
+        }
+    }
+}
+```
