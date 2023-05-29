@@ -1,3 +1,5 @@
+@file:Suppress("ClassName", "PrivatePropertyName")
+
 package com.shinonometn.ktor.server.access.control
 
 import io.ktor.application.*

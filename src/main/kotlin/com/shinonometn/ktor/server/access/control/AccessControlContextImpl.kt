@@ -7,9 +7,11 @@ import java.util.*
 
 class AccessControlContextImpl(
     override val request: ApplicationRequest,
-    private val extractors: List<AccessControlMetaExtractor>,
+    internal val extractors: List<AccessControlMetaExtractor>,
     private val checker: AccessControlChecker
 ) : AccessControlMetaProviderContext, AccessControlCheckerContext, AccessControlContextSnapshot {
+
+    internal var preventRefreshingMeta = false
 
     override val meta: MutableCollection<Any> by lazy {
         attributes.computeIfAbsent(MetaBucketAttributeKey) { LinkedList() }
@@ -24,6 +26,10 @@ class AccessControlContextImpl(
         val result = attributes.getOrNull(ProcessResultAttributeKey) ?: return null
         if (result is AccessControlCheckerResult.Rejected) return result
         return null
+    }
+
+    override fun result(): AccessControlCheckerResult {
+        return attributes[ProcessResultAttributeKey]
     }
 
     internal suspend fun refreshMeta() {

@@ -6,7 +6,12 @@ class AccessControlPipeline(
     override val developmentMode: Boolean = false
 ) : Pipeline<Unit, AccessControlContextImpl>(MetaExtractPhase, CheckPhase) {
     init {
-        intercept(MetaExtractPhase) { context.refreshMeta() }
+        intercept(MetaExtractPhase) {
+            if(!context.preventRefreshingMeta) {
+                context.refreshMeta()
+                context.preventRefreshingMeta = true
+            }
+        }
 
         intercept(CheckPhase) {
             val result = context.evaluateChecker()

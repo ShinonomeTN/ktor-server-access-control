@@ -11,10 +11,10 @@ import java.util.*
 
 class AccessControl(debug : Boolean, configuration: Configuration) {
 
-    private val metaProviders: List<AccessControlMetaExtractor> = configuration.authorizationInfoProviders
+    internal val metaProviders: List<AccessControlMetaExtractor> = configuration.authorizationInfoProviders
     private val onUnauthorized: OnUnAuthorizedHandler = configuration.onUnAuthorized
 
-    private val pipeline = AccessControlPipeline(debug)
+    internal val pipeline = AccessControlPipeline(debug)
 
     class Configuration {
         internal val authorizationInfoProviders = LinkedList<AccessControlMetaExtractor>()
@@ -110,3 +110,33 @@ class AccessControl(debug : Boolean, configuration: Configuration) {
  */
 val ApplicationCall.accessControl: AccessControlMetaSnapshot
     get() = attributes[AccessControlContextImpl.AttributeKey]
+
+/**
+ * Check accessControl in-place.
+ *
+ * Create a new Context, execute checker expression and returns the new context.
+ * Use `AccessControlContextSnapshot.result()` to get the result.
+ */
+suspend fun ApplicationCall.checkAccessControl(requirement: AccessControlRequirement, refreshMeta : Boolean = false) : AccessControlContextSnapshot {
+    val feature = application.feature(AccessControl)
+    val pipeline = feature.pipeline
+
+    val oldContext = attributes.getOrNull(AccessControlContextImpl.AttributeKey)
+
+    val newContext = AccessControlContextImpl(
+        request,
+        (oldContext?.extractors ?: feature.metaProviders).filter { requirement.providerNames.contains(it.name) },
+        requirement.checker
+    )
+    newContext.preventRefreshingMeta = !refreshMeta
+    if(!refreshMeta) oldContext?.let { newContext.meta.addAll(it.meta) }
+
+    try {
+        pipeline.execute(newContext)
+    } catch (e : Exception) {
+        application.log.error("Error while processing AccessControl pipeline", e)
+        throw e
+    }
+
+    return newContext
+}
