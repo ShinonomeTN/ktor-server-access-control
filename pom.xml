@@ -12,9 +12,9 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
 
-        <kotlin.version>1.6.10</kotlin.version>
-        <logback.version>1.2.5</logback.version>
-        <ktor.version>1.6.8</ktor.version>
+        <kotlin.version>1.7.0</kotlin.version>
+        <logback.version>1.2.9</logback.version>
+        <ktor.version>1.5.3</ktor.version>
     </properties>
 
     <repositories>
